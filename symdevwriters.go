@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	_"strconv"
+	"github.com/mcgrew/gostats"
 )
 
 func check(function string, e error) {
@@ -21,9 +23,11 @@ func main() {
 	metricFile := "filter.txt"
 	cachePattern := regexp.MustCompile("number write pending tracks")
 	writePattern := regexp.MustCompile("total writes per sec")
-	var devices = make(map[string][]string)
-	var cacheData []string
-	var writeData []string
+	var devices = make(map[string][]float64)
+	var cacheData []float64
+	cacheData=make([]float64,5)
+	var writeData []float64
+	writeData=make([]float64,5)
 
 	prep := exec.Command(stpToolsExe, "-f", btpFile, "-m", metricFile, "-std")
 	stdout, err := prep.StdoutPipe()
@@ -33,18 +37,20 @@ func main() {
 	for result.Scan() {
 		resultText := result.Text()
 		if cachePattern.MatchString(resultText) {
-			cacheData = strings.Split(resultText, ",")
-		} else if writePattern.MatchString(resultText) {
-			writeData = strings.Split(resultText, ",")
-			devices[writeData[0]] = writeData
-		}
-	}
-
-	for device := range devices {
-		for value := range devices[device] {
-			if value > 1 {
-				fmt.Println(device, devices[device][value],cacheData[value])
+			lineData:=strings.Split(resultText,",")
+			
+			for i:=2;i<len(lineData);i++ {
+			 fmt.Println("Yeah " ,i,lineData[i])//cacheData[i]=strconv.ParseFloat(lineData[i],64) //strconv.ParseFloat(lineData[i],64)
 			}
+		} else if writePattern.MatchString(resultText) {
+			lineData:=strings.Split(resultText,",")
+			for i:=2;i<len(lineData);i++ {
+				writeData[i]=12.0//strconv.ParseFloat(lineData[i],64)
+			}
+			devices[lineData[0]] = writeData
 		}
 	}
+	for device := range devices {
+				fmt.Println(device, statistics.PearsonCorrelation(devices[device],cacheData))
+			}
 }
