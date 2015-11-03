@@ -50,9 +50,23 @@ func check(function string, e error) {
 	}
 }
 
+func LocateFile(exe string) string {
+	progDirOld := `C:\Program Files (x86)\EMC\STPTools\` + exe
+	progDirNew := `C:\Program Files\EMC\STPTools\` + exe
+	fileLocation := ""
+
+	if _, err := os.Stat(progDirNew); err == nil {
+		fileLocation = progDirNew
+	} else if _, err := os.Stat(progDirOld); err == nil {
+		fileLocation = progDirOld
+	} else {
+		log.Fatal(exe + " is required, but is not found.\nLocations checked were:\n" + progDirNew + "\n" + progDirOld)
+	}
+	return fileLocation
+}
+
 func main() {
-	//TODO: Check to make sure STPTOOLS are installed
-	stpToolsExe := "C:\\Program Files (x86)\\EMC\\STPTools\\stprpt.exe"
+	stpToolsExe := LocateFile("StpRpt.exe")
 	metricFile := "./filter.txt"
 
 	cachePattern := regexp.MustCompile("number write pending tracks")
@@ -75,18 +89,25 @@ func main() {
 	} else {
 		btpFile = cmdArgs[0]
 	}
-
+	
+	if _, err := os.Stat(btpFile); err != nil {
+		fmt.Println("Unable to find file:", btpFile)
+		return
+	}
+	
 	f, err := os.Create(metricFile)
 	check("Create filter file", err)
 	defer f.Close()
 
 //TODO: Remove filter.txt file
-	fmt.Println("Creating filter.txt file...")
+	fmt.Print("Creating filter.txt file...")
 	_, err = f.WriteString("System::number write pending tracks\n")
 	check("Write first line to file", err)
 	_, err = f.WriteString("Devices::total writes per sec")
 	check("Write second line to file", err)
-
+	fmt.Println("Done.")
+	
+	fmt.Print("Reading BTP file...")
 	prep := exec.Command(stpToolsExe, "-f", btpFile, "-m", metricFile, "-std")
 	stdout, err := prep.StdoutPipe()
 	check("Reading BTP file. ", err)
@@ -112,7 +133,7 @@ func main() {
 			writeData = nil
 		}
 	}
-
+	fmt.Println("Done.s")
 	correl := map[string]float64{}
 
 	for device := range devices {
