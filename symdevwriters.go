@@ -80,6 +80,7 @@ func main() {
 	check("Create filter file", err)
 	defer f.Close()
 
+//TODO: Remove filter.txt file
 	fmt.Println("Creating filter.txt file...")
 	_, err = f.WriteString("System::number write pending tracks\n")
 	check("Write first line to file", err)
