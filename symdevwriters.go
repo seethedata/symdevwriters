@@ -1,3 +1,6 @@
+// symdevwriters reads a BTP file and prints a list of devices in decending order of correlation to system cache usage.
+// The goal of this analysis is to help identify devices that contribute to high cache utilization.
+
 package main
 
 import (
@@ -97,17 +100,19 @@ func main() {
 	
 	f, err := os.Create(metricFile)
 	check("Create filter file", err)
-	defer f.Close()
+	defer func() {
+		err=f.Close()
+		check("Closing filter file",err)
+		err=os.Remove(f.Name())
+		check("Removing filter file",err)
+	}()
 
-//TODO: Remove filter.txt file
-	fmt.Print("Creating filter.txt file...")
 	_, err = f.WriteString("System::number write pending tracks\n")
 	check("Write first line to file", err)
 	_, err = f.WriteString("Devices::total writes per sec")
 	check("Write second line to file", err)
-	fmt.Println("Done.")
 	
-	fmt.Print("Reading BTP file...")
+	fmt.Print("Reading BTP file ( "+btpFile+" )...")
 	prep := exec.Command(stpToolsExe, "-f", btpFile, "-m", metricFile, "-std")
 	stdout, err := prep.StdoutPipe()
 	check("Reading BTP file. ", err)
@@ -133,7 +138,12 @@ func main() {
 			writeData = nil
 		}
 	}
-	fmt.Println("Done.s")
+	
+	err=prep.Wait()
+	check("Reading BTP file.",err)
+	
+	fmt.Println("Done.")
+	
 	correl := map[string]float64{}
 
 	for device := range devices {
